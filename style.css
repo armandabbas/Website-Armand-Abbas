@@ -377,11 +377,12 @@ a {
     .hero-name {
         font-size: 12vw;
         letter-spacing: -0.04em;
-        line-height: 1;
+        line-height: 1.1;
         transform: translateY(-5px);
+        overflow: visible;
     }
     .footer-name {
-        bottom: 45px;
+        bottom: 55px; /* Moved slightly higher to completely clear iOS Safe Area */
     }
 }
 
@@ -799,6 +800,7 @@ body {
 /* Footer */
 .footer {
     height: 100vh;
+    height: 100dvh;
     width: 100%;
     position: relative;
     display: flex;
