@@ -340,10 +340,15 @@ barba.init({
                     if (lenis) lenis.scrollTo(0, { immediate: true });
                 }
                 
-                // Erst NACH dem Wiederherstellen des alten Scroll-Stands dürfen die Texte wieder da sein
-                gsap.set('.hero-name', { visibility: 'visible' });
+                // Völlig verborgen unter dem schwarzen Projekt-Vorhang setzen wir die Basis-Werte zurück
+                // und lassen GSAP ScrollTrigger sofort ausrechnen, ob die Navigation bei Pixel 1500 eigentlich sichtbar sein darf (Nein!).
+                gsap.set('.nav', { opacity: 1, visibility: 'visible', pointerEvents: 'all' });
+                gsap.set('.hero-name', { visibility: 'visible', opacity: 1 });
+                
+                initScroll(data.next.container);
                 ScrollTrigger.refresh();
                 
+                // Erst dann lassen wir den Vorhang abfallen!
                 return gsap.to(data.next.container, { duration: 1.5 }); // Warten, während Projekt hochfährt
             } else {
                 gsap.set(data.next.container, { opacity: 0 });
@@ -363,18 +368,12 @@ barba.init({
                 initHomePageAnimations(data.next.container);
             } else {
                 gsap.set('.loader', { display: 'none' });
-                const heroName = data.next.container.querySelector('.hero-name');
-                const bio = data.next.container.querySelector('.nav-bio');
-                if (heroName) gsap.set(heroName, { opacity: 1, y: 0 });
-                if (bio) gsap.set(bio, { opacity: 1, y: 0 });
-                gsap.set('.nav', { opacity: 1, y: 0, visibility: 'visible', pointerEvents: 'all' });
+                // GSAP Reset wird jetzt sicher unsichtbar im "transitions.enter" Bereich kalkuliert, 
+                // so flackert die Navigation nicht mehr auf!
             }
         },
         afterEnter(data) {
-            // Re-initialize scroll triggers after transition is fully complete
-            // This ensures DOM is stable and measurements are accurate
-            ScrollTrigger.refresh();
-            initScroll(data.next.container);
+            // Scroll Trigger wird nun schon im Hook erzeugt, kann also hier leer bleiben
         }
     }, {
         namespace: 'project',
