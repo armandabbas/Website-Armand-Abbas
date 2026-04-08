@@ -382,7 +382,7 @@ a {
         overflow: visible;
     }
     .footer-name {
-        bottom: 55px; /* Moved slightly higher to completely clear iOS Safe Area */
+        bottom: 75px; /* Moved higher up as requested */
     }
 }
 
