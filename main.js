@@ -253,130 +253,34 @@ barba.init({
         name: 'fade-transition',
         async leave(data) {
             if (data.current.namespace === 'home') saveScroll();
-
-            if (data.current.namespace === 'project') {
-                // Kein Clone beim Verlassen, nur sanft ausblenden
-                transitionClone = null;
-            } else if (data.next.namespace === 'project') {
-                const trigger = data.trigger;
-                const clickedImage = trigger instanceof Element ? trigger.querySelector('.project-image') : null;
-                if (clickedImage) {
-                    const rect = clickedImage.getBoundingClientRect();
-                    transitionClone = clickedImage.cloneNode(true);
-                    lastClickedSrc = clickedImage.getAttribute('src');
-                    gsap.set(transitionClone, {
-                        position: 'fixed',
-                        top: rect.top, left: rect.left, width: rect.width, height: rect.height,
-                        zIndex: 99999, margin: 0, objectFit: 'cover'
-                    });
-                    document.body.appendChild(transitionClone);
-                    gsap.set(clickedImage, { opacity: 0 }); // Original verstecken
-                }
-            }
-
-            return gsap.to(data.current.container, { opacity: 0, duration: 0.8, ease: "power2.inOut" });
+            
+            // Clean premium fade out
+            return gsap.to(data.current.container, { 
+                opacity: 0, 
+                duration: 0.6, 
+                ease: "power2.inOut" 
+            });
         },
         async enter(data) {
+            // 1. Scroll-Status sofort und genau wiederherstellen
             if (data.next.namespace === 'home') {
                 restoreScroll();
                 const savedScroll = sessionStorage.getItem('homeScrollPos');
-                if (savedScroll) window.scrollTo(0, parseInt(savedScroll));
+                if (savedScroll) {
+                    window.scrollTo(0, parseInt(savedScroll));
+                }
             } else {
                 window.scrollTo(0, 0);
                 if (lenis) lenis.scrollTo(0, { immediate: true });
             }
+            
             ScrollTrigger.refresh();
 
-            if (data.next.namespace === 'project') {
-                const heroImage = data.next.container.querySelector('.project-detail-hero img');
-                gsap.set(data.next.container, { opacity: 1 });
-
-                if (heroImage && transitionClone) {
-                    gsap.set(heroImage, { opacity: 0 });
-                    const targetRect = heroImage.getBoundingClientRect();
-                    
-                    gsap.to(transitionClone, {
-                        top: targetRect.top,
-                        left: targetRect.left,
-                        width: targetRect.width,
-                        height: targetRect.height,
-                        duration: 1.0,
-                        ease: "power3.inOut",
-                        onComplete: () => {
-                            gsap.set(heroImage, { opacity: 1 });
-                            if (transitionClone) { transitionClone.remove(); transitionClone = null; }
-                        }
-                    });
-                } else if (transitionClone) {
-                     transitionClone.remove(); transitionClone = null;
-                }
-
-                gsap.from('.project-detail-metadata > *', {
-                    y: 40,
-                    opacity: 0,
-                    duration: 1,
-                    stagger: 0.05,
-                    ease: "power3.out",
-                    delay: 0.2
-                });
-            }
-
-            if (data.next.namespace === 'home') {
-                if (transitionClone) {
-                    const targetImg = Array.from(document.querySelectorAll('.project-image')).find(img => {
-                        return img.getAttribute('src') === lastClickedSrc;
-                    });
-
-                    if (targetImg) {
-                        gsap.set(targetImg, { opacity: 0 });
-                        const targetRect = targetImg.getBoundingClientRect();
-                        
-                        gsap.to(transitionClone, {
-                            top: targetRect.top,
-                            left: targetRect.left,
-                            width: targetRect.width,
-                            height: targetRect.height,
-                            duration: 1.0,
-                            ease: "power3.inOut",
-                            onComplete: () => {
-                                gsap.set(targetImg, { opacity: 1 });
-                                if (transitionClone) { transitionClone.remove(); transitionClone = null; }
-                            }
-                        });
-                    } else {
-                        if (transitionClone) { transitionClone.remove(); transitionClone = null; }
-                    }
-                }
-            }
-            
-            // Normale Fade Ansichten wenn kein Clone da ist (z.B. Zurück auf Home)
-            if (!transitionClone) {
-                if (data.next.namespace === 'home' && data.current.namespace === 'project') {
-                    const tl = gsap.timeline();
-                    const cards = data.next.container.querySelectorAll('.project-card');
-                    
-                    // Container (Hintergrund, Nav) zügig einblenden
-                    tl.fromTo(data.next.container, 
-                        { opacity: 0 }, 
-                        { opacity: 1, duration: 0.5, ease: "power2.inOut" },
-                        0
-                    );
-                    
-                    // Projekt-Karten sanft und weich von unten herein gleiten lassen (Welle)
-                    tl.fromTo(cards, 
-                        { opacity: 0, y: 50 },
-                        { opacity: 1, y: 0, duration: 0.9, stagger: 0.05, ease: "power3.out" },
-                        0.1
-                    );
-                    
-                    return tl;
-                } else {
-                     return gsap.fromTo(data.next.container, 
-                         { opacity: 0 },
-                         { opacity: 1, duration: 0.6, ease: "power2.inOut" }
-                     );
-                }
-            }
+            // 2. Clean premium fade in für den kompletten neuen Container
+            return gsap.fromTo(data.next.container, 
+                { opacity: 0 }, 
+                { opacity: 1, duration: 0.6, ease: "power2.inOut" }
+            );
         }
     }],
     views: [{
