@@ -193,38 +193,12 @@ function initHomePageAnimations(container = document) {
 
     const tl = gsap.timeline();
     const progressLabel = document.querySelector('.loader-text');
-    const hasVisited = sessionStorage.getItem('hasVisited');
 
     // STRATEGY: Instant Visibility
     // Elements are already there, revealed by the loader sliding up.
     gsap.set(container.querySelector('.hero-name'), { opacity: 1 });
     gsap.set(container.querySelector('.nav-bio'), { opacity: 1 });
     gsap.set('.nav', { opacity: 1, y: 0, visibility: 'visible', pointerEvents: 'all' });
-
-    if (hasVisited) {
-        // Skip counter and HIDE it completely if already visited
-        if (progressLabel) gsap.set(progressLabel, { opacity: 0, visibility: 'hidden' });
-
-        tl.to('.loader', {
-            yPercent: -100,
-            duration: 1.5,
-            ease: "power4.inOut",
-            onStart: () => {
-                // HIDDEN RESET: Initialize scroll while loader covers screen
-                initScroll(container);
-                lenis.scrollTo(1, { immediate: true });
-                setTimeout(() => {
-                    lenis.scrollTo(0, { immediate: true });
-                    ScrollTrigger.refresh();
-                }, 50);
-            },
-            onComplete: () => {
-                const loader = document.querySelector('.loader');
-                if (loader) loader.style.display = 'none';
-            }
-        });
-        return;
-    }
 
     if (progressLabel) {
         // Fresh visit: Ensure label is visible and start at 0
@@ -259,7 +233,6 @@ function initHomePageAnimations(container = document) {
                     }, 50);
                 },
                 onComplete: () => {
-                    sessionStorage.setItem('hasVisited', 'true');
                     if (loader) loader.style.display = 'none';
                 }
             }, "-=0.2");
