@@ -456,6 +456,7 @@ body {
         font-size: 8rem;
         line-height: 1;
         margin-bottom: 0;
+        transform: translateY(10px);
     }
 
     body.pretzel-cursor-active,
