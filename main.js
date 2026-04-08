@@ -274,7 +274,7 @@ barba.init({
                 }
             }
 
-            return gsap.to(data.current.container, { opacity: 0, duration: 0.5, ease: "power2.inOut" });
+            return gsap.to(data.current.container, { opacity: 0, duration: 0.8, ease: "power2.inOut" });
         },
         async enter(data) {
             if (data.next.namespace === 'home') {
@@ -353,7 +353,7 @@ barba.init({
             if (!transitionClone) {
                  return gsap.fromTo(data.next.container, 
                      { opacity: 0 },
-                     { opacity: 1, duration: 0.5, ease: "power2.inOut" }
+                     { opacity: 1, duration: 1.2, ease: "power2.inOut" }
                  );
             }
         }
