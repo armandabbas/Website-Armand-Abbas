@@ -380,6 +380,9 @@ a {
         line-height: 1;
         transform: translateY(-5px);
     }
+    .footer-name {
+        bottom: 45px;
+    }
 }
 
 .section-title {
