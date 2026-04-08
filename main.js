@@ -131,9 +131,8 @@ function initScroll(container = document) {
             }
         });
 
-        // Eine künstliche "Wartezeit" in der Timeline, bevor die Bewegung/Fade-Out startet
-        nameTl.to({}, { duration: 0.15 }) 
-              .to(heroName, { y: '30vh', opacity: 0, duration: 0.85, ease: 'none' });
+        // Sofort losbewegen beim ersten Pixel scrollen ohne künstliche Wartezeit
+        nameTl.to(heroName, { y: '30vh', opacity: 0, duration: 1.0, ease: 'none' });
 
         // HIDE NAV ON SCROLL (Only if we are NOT at top)
         if (document.querySelector('.nav')) {
@@ -250,37 +249,106 @@ function initHomePageAnimations(container = document) {
 
 barba.init({
     transitions: [{
-        name: 'fade-transition',
+        name: 'curtain-transition',
+        sync: true, // Zwingend erforderlich, da die Seiten übereinander liegen
         async leave(data) {
-            if (data.current.namespace === 'home') saveScroll();
-            
-            // Clean premium fade out
-            return gsap.to(data.current.container, { 
-                opacity: 0, 
-                duration: 0.6, 
-                ease: "power2.inOut" 
-            });
+            if (data.current.namespace === 'home') {
+                saveScroll();
+                
+                // Verstecke die heroischen fixierten Texte, damit GSAP's ScrollTrigger sie 
+                // beim Scroll-Sprung auf 0 nicht versehentlich wieder fälschlicherweise ins Bild zieht!
+                gsap.set('.hero-name', { visibility: 'hidden', opacity: 0 });
+                
+                // STARTSEITE: Bleibt während des Vorhang-Falls einfach still im Hintergrund stehen!
+                gsap.set(data.current.container, { 
+                    position: 'fixed',
+                    top: -window.scrollY,
+                    left: 0,
+                    width: '100%',
+                    backgroundColor: '#000000', // Zwingend blickdicht!
+                    zIndex: 1, // Startseite ist im Untergrund
+                    pointerEvents: 'none'
+                });
+                
+                // BEIDE Container (Startseite und Projekt) müssen auf die Millisekunde genau synchron enden (1.5s), 
+                // um Garbage Collection Stutters ("stehendes Bild") von Barba zu verhindern!
+                return gsap.to(data.current.container, { duration: 1.5 }); 
+                
+            } else if (data.current.namespace === 'project') {
+                // PROJEKT VERLASSEN: Rollladen geht wieder nach UNTEN zu!
+                gsap.set(data.current.container, {
+                    position: 'fixed',
+                    top: -window.scrollY,
+                    left: 0,
+                    width: '100%',
+                    backgroundColor: '#000000', // Zwingend blickdicht!
+                    zIndex: 999999 // Vorhang absolut dominant über die Navigation legen!
+                });
+                
+                return gsap.to(data.current.container, { 
+                    y: "100vh", // Ziehe das gesamte Projektbild exakt einen Bildschirm nach UNTEN weg
+                    duration: 1.5, 
+                    ease: "power4.inOut" 
+                });
+            } else {
+                // Fallback (z.B. andere Seiten)
+                return gsap.to(data.current.container, { opacity: 0, duration: 0.5 });
+            }
         },
         async enter(data) {
-            // 1. Scroll-Status sofort und genau wiederherstellen
-            if (data.next.namespace === 'home') {
-                restoreScroll();
-                const savedScroll = sessionStorage.getItem('homeScrollPos');
-                if (savedScroll) {
-                    window.scrollTo(0, parseInt(savedScroll));
-                }
-            } else {
+            if (data.next.namespace === 'project') {
+                // PROJEKT LADEN: Projekt kommt von UNTEN heraufgefahren
                 window.scrollTo(0, 0);
                 if (lenis) lenis.scrollTo(0, { immediate: true });
+                ScrollTrigger.refresh();
+                
+                gsap.set(data.next.container, { 
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    y: "100vh", // Versteckt das Projekt unter dem Bildschirm
+                    opacity: 1,
+                    backgroundColor: '#000000', // Zwingend blickdicht!
+                    zIndex: 999999  // Höher als Armand Abbas Text und Nav
+                });
+                
+                return gsap.to(data.next.container, { 
+                    y: "0vh", 
+                    duration: 1.5, 
+                    ease: "power4.inOut",
+                    clearProps: "all" 
+                });
+                
+            } else if (data.next.namespace === 'home') {
+                // STARTSEITE BETRETEN: Liegt fertig unterhalb des abziehenden Rollladens (Projekt)
+                gsap.set(data.next.container, { 
+                    opacity: 1, 
+                    backgroundColor: '#000000',
+                    zIndex: 1, 
+                    y: 0 
+                });
+                
+                const savedScroll = sessionStorage.getItem('homeScrollPos');
+                if (savedScroll) {
+                    if (lenis) lenis.stop();
+                    window.scrollTo(0, parseInt(savedScroll));
+                    if (lenis) lenis.scrollTo(parseInt(savedScroll), { immediate: true });
+                    if (lenis) lenis.start();
+                } else {
+                    window.scrollTo(0, 0);
+                    if (lenis) lenis.scrollTo(0, { immediate: true });
+                }
+                
+                // Erst NACH dem Wiederherstellen des alten Scroll-Stands dürfen die Texte wieder da sein
+                gsap.set('.hero-name', { visibility: 'visible' });
+                ScrollTrigger.refresh();
+                
+                return gsap.to(data.next.container, { duration: 1.5 }); // Warten, während Projekt hochfährt
+            } else {
+                gsap.set(data.next.container, { opacity: 0 });
+                return gsap.to(data.next.container, { opacity: 1, duration: 0.5 });
             }
-            
-            ScrollTrigger.refresh();
-
-            // 2. Clean premium fade in für den kompletten neuen Container
-            return gsap.fromTo(data.next.container, 
-                { opacity: 0 }, 
-                { opacity: 1, duration: 0.6, ease: "power2.inOut" }
-            );
         }
     }],
     views: [{
