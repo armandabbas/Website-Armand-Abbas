@@ -351,10 +351,31 @@ barba.init({
             
             // Normale Fade Ansichten wenn kein Clone da ist (z.B. Zurück auf Home)
             if (!transitionClone) {
-                 return gsap.fromTo(data.next.container, 
-                     { opacity: 0 },
-                     { opacity: 1, duration: 1.2, ease: "power2.inOut" }
-                 );
+                if (data.next.namespace === 'home' && data.current.namespace === 'project') {
+                    const tl = gsap.timeline();
+                    const cards = data.next.container.querySelectorAll('.project-card');
+                    
+                    // Container (Hintergrund, Nav) zügig einblenden
+                    tl.fromTo(data.next.container, 
+                        { opacity: 0 }, 
+                        { opacity: 1, duration: 0.5, ease: "power2.inOut" },
+                        0
+                    );
+                    
+                    // Projekt-Karten sanft und weich von unten herein gleiten lassen (Welle)
+                    tl.fromTo(cards, 
+                        { opacity: 0, y: 50 },
+                        { opacity: 1, y: 0, duration: 0.9, stagger: 0.05, ease: "power3.out" },
+                        0.1
+                    );
+                    
+                    return tl;
+                } else {
+                     return gsap.fromTo(data.next.container, 
+                         { opacity: 0 },
+                         { opacity: 1, duration: 0.6, ease: "power2.inOut" }
+                     );
+                }
             }
         }
     }],
