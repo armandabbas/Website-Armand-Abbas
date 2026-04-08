@@ -255,19 +255,8 @@ barba.init({
             if (data.current.namespace === 'home') saveScroll();
 
             if (data.current.namespace === 'project') {
-                const currentHeroImage = data.current.container.querySelector('.project-detail-hero img');
-                if (currentHeroImage) {
-                    const rect = currentHeroImage.getBoundingClientRect();
-                    transitionClone = currentHeroImage.cloneNode(true);
-                    lastClickedSrc = currentHeroImage.getAttribute('src');
-                    gsap.set(transitionClone, {
-                        position: 'fixed',
-                        top: rect.top, left: rect.left, width: rect.width, height: rect.height,
-                        zIndex: 99999, margin: 0, objectFit: 'cover'
-                    });
-                    document.body.appendChild(transitionClone);
-                    gsap.set(currentHeroImage, { opacity: 0 }); // Original verstecken
-                }
+                // Kein Clone beim Verlassen, nur sanft ausblenden
+                transitionClone = null;
             } else if (data.next.namespace === 'project') {
                 const trigger = data.trigger;
                 const clickedImage = trigger instanceof Element ? trigger.querySelector('.project-image') : null;
@@ -333,7 +322,6 @@ barba.init({
             }
 
             if (data.next.namespace === 'home') {
-                gsap.set(data.next.container, { opacity: 1 });
                 if (transitionClone) {
                     const targetImg = Array.from(document.querySelectorAll('.project-image')).find(img => {
                         return img.getAttribute('src') === lastClickedSrc;
@@ -341,8 +329,6 @@ barba.init({
 
                     if (targetImg) {
                         gsap.set(targetImg, { opacity: 0 });
-                        
-                        // Zwingend den Scroll-Abgleich abwarten
                         const targetRect = targetImg.getBoundingClientRect();
                         
                         gsap.to(transitionClone, {
@@ -363,13 +349,12 @@ barba.init({
                 }
             }
             
-            // Allow home to instantly appear if flipping, otherwise soft fade
-            if (!transitionClone && data.next.namespace !== 'home' && data.next.namespace !== 'project') {
-                 return gsap.from(data.next.container, {
-                     opacity: 0,
-                     duration: 0.5,
-                     ease: "power2.inOut"
-                 });
+            // Normale Fade Ansichten wenn kein Clone da ist (z.B. Zurück auf Home)
+            if (!transitionClone) {
+                 return gsap.fromTo(data.next.container, 
+                     { opacity: 0 },
+                     { opacity: 1, duration: 0.5, ease: "power2.inOut" }
+                 );
             }
         }
     }],
