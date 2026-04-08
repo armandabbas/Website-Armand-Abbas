@@ -53,9 +53,9 @@ class CursorManager {
     }
 }
 
-// --- GLOBAL STATE ---
-let flipState = null;
-let lastClickedImg = null;
+// globally tracking the custom clone state
+let transitionClone = null;
+let lastClickedSrc = null;
 new CursorManager();
 
 if ('scrollRestoration' in history) {
@@ -131,7 +131,9 @@ function initScroll(container = document) {
             }
         });
 
-        nameTl.to(heroName, { y: '30vh', opacity: 0, duration: 1, ease: 'none' });
+        // Eine künstliche "Wartezeit" in der Timeline, bevor die Bewegung/Fade-Out startet
+        nameTl.to({}, { duration: 0.15 }) 
+              .to(heroName, { y: '30vh', opacity: 0, duration: 0.85, ease: 'none' });
 
         // HIDE NAV ON SCROLL (Only if we are NOT at top)
         if (document.querySelector('.nav')) {
@@ -162,7 +164,7 @@ function initScroll(container = document) {
                     trigger: projectsSection,
                     start: 'bottom 50%',
                     end: 'bottom 10%',
-                    scrub: 1.5,
+                    scrub: true,
                     invalidateOnRefresh: true,
                     immediateRender: false
                 }
@@ -221,7 +223,7 @@ function initHomePageAnimations(container = document) {
         })
             .to(loader, {
                 yPercent: -100,
-                duration: 1.5,
+                duration: 2.2, // Increased from 1.5 to slow down the curtain
                 ease: "power4.inOut",
                 onStart: () => {
                     // HIDDEN RESET
@@ -250,36 +252,74 @@ barba.init({
     transitions: [{
         name: 'fade-transition',
         async leave(data) {
-            if (data.next.namespace === 'project' || data.current.namespace === 'project') {
+            if (data.current.namespace === 'home') saveScroll();
+
+            if (data.current.namespace === 'project') {
+                const currentHeroImage = data.current.container.querySelector('.project-detail-hero img');
+                if (currentHeroImage) {
+                    const rect = currentHeroImage.getBoundingClientRect();
+                    transitionClone = currentHeroImage.cloneNode(true);
+                    lastClickedSrc = currentHeroImage.getAttribute('src');
+                    gsap.set(transitionClone, {
+                        position: 'fixed',
+                        top: rect.top, left: rect.left, width: rect.width, height: rect.height,
+                        zIndex: 99999, margin: 0, objectFit: 'cover'
+                    });
+                    document.body.appendChild(transitionClone);
+                    gsap.set(currentHeroImage, { opacity: 0 }); // Original verstecken
+                }
+            } else if (data.next.namespace === 'project') {
                 const trigger = data.trigger;
                 const clickedImage = trigger instanceof Element ? trigger.querySelector('.project-image') : null;
                 if (clickedImage) {
-                    flipState = Flip.getState(clickedImage);
-                    lastClickedImg = clickedImage;
+                    const rect = clickedImage.getBoundingClientRect();
+                    transitionClone = clickedImage.cloneNode(true);
+                    lastClickedSrc = clickedImage.getAttribute('src');
+                    gsap.set(transitionClone, {
+                        position: 'fixed',
+                        top: rect.top, left: rect.left, width: rect.width, height: rect.height,
+                        zIndex: 99999, margin: 0, objectFit: 'cover'
+                    });
+                    document.body.appendChild(transitionClone);
+                    gsap.set(clickedImage, { opacity: 0 }); // Original verstecken
                 }
             }
-            if (data.current.namespace === 'home') saveScroll();
 
             return gsap.to(data.current.container, { opacity: 0, duration: 0.5, ease: "power2.inOut" });
         },
         async enter(data) {
-            window.scrollTo(0, 0);
-            if (lenis) lenis.scrollTo(0, { immediate: true });
+            if (data.next.namespace === 'home') {
+                restoreScroll();
+                const savedScroll = sessionStorage.getItem('homeScrollPos');
+                if (savedScroll) window.scrollTo(0, parseInt(savedScroll));
+            } else {
+                window.scrollTo(0, 0);
+                if (lenis) lenis.scrollTo(0, { immediate: true });
+            }
             ScrollTrigger.refresh();
 
             if (data.next.namespace === 'project') {
                 const heroImage = data.next.container.querySelector('.project-detail-hero img');
                 gsap.set(data.next.container, { opacity: 1 });
 
-                if (heroImage && flipState) {
-                    Flip.from(flipState, {
-                        targets: heroImage,
-                        duration: 1.2,
-                        ease: "power4.inOut",
-                        scale: true,
-                        absolute: true
+                if (heroImage && transitionClone) {
+                    gsap.set(heroImage, { opacity: 0 });
+                    const targetRect = heroImage.getBoundingClientRect();
+                    
+                    gsap.to(transitionClone, {
+                        top: targetRect.top,
+                        left: targetRect.left,
+                        width: targetRect.width,
+                        height: targetRect.height,
+                        duration: 1.0,
+                        ease: "power3.inOut",
+                        onComplete: () => {
+                            gsap.set(heroImage, { opacity: 1 });
+                            if (transitionClone) { transitionClone.remove(); transitionClone = null; }
+                        }
                     });
-                    flipState = null;
+                } else if (transitionClone) {
+                     transitionClone.remove(); transitionClone = null;
                 }
 
                 gsap.from('.project-detail-metadata > *', {
@@ -293,39 +333,64 @@ barba.init({
             }
 
             if (data.next.namespace === 'home') {
-                if (flipState) {
+                gsap.set(data.next.container, { opacity: 1 });
+                if (transitionClone) {
                     const targetImg = Array.from(document.querySelectorAll('.project-image')).find(img => {
-                        return img.getAttribute('src') === lastClickedImg?.getAttribute('src');
+                        return img.getAttribute('src') === lastClickedSrc;
                     });
 
                     if (targetImg) {
-                        Flip.from(flipState, {
-                            targets: targetImg,
-                            duration: 1.2,
-                            ease: "power4.inOut",
-                            scale: true,
-                            absolute: true
+                        gsap.set(targetImg, { opacity: 0 });
+                        
+                        // Zwingend den Scroll-Abgleich abwarten
+                        const targetRect = targetImg.getBoundingClientRect();
+                        
+                        gsap.to(transitionClone, {
+                            top: targetRect.top,
+                            left: targetRect.left,
+                            width: targetRect.width,
+                            height: targetRect.height,
+                            duration: 1.0,
+                            ease: "power3.inOut",
+                            onComplete: () => {
+                                gsap.set(targetImg, { opacity: 1 });
+                                if (transitionClone) { transitionClone.remove(); transitionClone = null; }
+                            }
                         });
+                    } else {
+                        if (transitionClone) { transitionClone.remove(); transitionClone = null; }
                     }
-                    flipState = null;
                 }
             }
-
-            return gsap.from(data.next.container, {
-                opacity: 0,
-                duration: 0.5,
-                ease: "power2.inOut"
-            });
+            
+            // Allow home to instantly appear if flipping, otherwise soft fade
+            if (!transitionClone && data.next.namespace !== 'home' && data.next.namespace !== 'project') {
+                 return gsap.from(data.next.container, {
+                     opacity: 0,
+                     duration: 0.5,
+                     ease: "power2.inOut"
+                 });
+            }
         }
     }],
     views: [{
         namespace: 'home',
         beforeEnter(data) {
-            gsap.set('.loader', { yPercent: 0 });
-            window.scrollTo(0, 0);
-            if (lenis) lenis.scrollTo(0, { immediate: true });
             ScrollTrigger.getAll().forEach(t => t.kill());
-            initHomePageAnimations(data.next.container);
+            
+            if (data.current.namespace !== 'project') {
+                gsap.set('.loader', { yPercent: 0 });
+                window.scrollTo(0, 0);
+                if (lenis) lenis.scrollTo(0, { immediate: true });
+                initHomePageAnimations(data.next.container);
+            } else {
+                gsap.set('.loader', { display: 'none' });
+                const heroName = data.next.container.querySelector('.hero-name');
+                const bio = data.next.container.querySelector('.nav-bio');
+                if (heroName) gsap.set(heroName, { opacity: 1, y: 0 });
+                if (bio) gsap.set(bio, { opacity: 1, y: 0 });
+                gsap.set('.nav', { opacity: 1, y: 0, visibility: 'visible', pointerEvents: 'all' });
+            }
         },
         afterEnter(data) {
             // Re-initialize scroll triggers after transition is fully complete
