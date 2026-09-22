@@ -536,20 +536,20 @@ body {
 
     /* Odd items (1, 3, 5...) - Left Side */
     .projects-grid .project-card:nth-child(4n+1) {
-        grid-column: span 2;
+        grid-column: span 3;
     }
 
     .projects-grid .project-card:nth-child(4n+3) {
-        grid-column: span 3;
+        grid-column: span 2;
     }
 
     /* Even items (2, 4, 6...) - Right Side */
     .projects-grid .project-card:nth-child(4n+2) {
-        grid-column: span 3;
+        grid-column: span 2;
     }
 
     .projects-grid .project-card:nth-child(4n+4) {
-        grid-column: span 2;
+        grid-column: span 3;
     }
 
     /* Remove old vertical offset since grid gap handles spacing, 
