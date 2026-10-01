@@ -12,6 +12,8 @@ export default defineConfig({
         project4: ('project-4.html'),
         project5: ('project-5.html'),
         project6: ('project-6.html'),
+        projectChroma1: ('project-chroma-1.html'),
+        projectChroma2: ('project-chroma-2.html'),
       },
     },
   },
